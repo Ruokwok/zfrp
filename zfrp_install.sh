@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 format_arch() {
 	if [ $1 == aarch ]; then echo arm; return 0; fi
 	if [ $1 == aarch64 ]; then echo arm64; return 0; fi
