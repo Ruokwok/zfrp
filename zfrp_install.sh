@@ -86,7 +86,8 @@ if [ ${oper} == "1" ]; then
 	rm -rf frp.tar.gz
 	wget -O frp.tar.gz https://github.com/fatedier/frp/releases/download/v${version}/frp_${version}_linux_${arch}.tar.gz
 	mkdir frp_temp
-	tar -xvpf frp.tar.gz frp frp_${version}_linux_${arch}/frpc
+	tar -xvpf frp.tar.gz frp_${version}_linux_${arch}/frpc
+	mdkir /etc/zfrp
 	mv frp_${version}_linux_${arch}/frpc /etc/zfrp/zfrp_frpc
 	wget -O /etc/zfrp/zfrp.sh https://raw.kgithub.com/Ruokwok/zfrp/main/zfrp.sh
 	ln /usr/bin/zfrp /etc/zfrp/zfrp.sh
