@@ -53,7 +53,7 @@ if [ $# -gt 0 ] && [ $1 == "-help" ]; then
 fi
 if [ $# -gt 0 ] && [ $1 == "-s" ]; then
 	echo 开始创建新隧道
-	printf "请输入隧道名称:"i
+	printf "请输入隧道名称:"
 	read frp_name
 	if [ ! ${frp_name} ]; then
 		echo 不能为空！
