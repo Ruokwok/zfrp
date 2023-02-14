@@ -228,8 +228,8 @@ Type=simple
 User=root
 KillMode=none
 Restart=no
-ExecStartPre=${path}zfrp.sh -stop
-ExecStart=${path}zfrp.sh -runall
+ExecStartPre=${path}zfrp.sh -stopall
+ExecStart=${path}zfrp.sh -start
 ExecStop=echo stop
 [Install]
 WantedBy=multi-user.target" > /etc/systemd/system/zfrp.service
@@ -248,4 +248,25 @@ WantedBy=multi-user.target" > /etc/systemd/system/zfrp.service
 fi
 if [ $# -gt 0 ] && [ $1 == "-pid" ]; then
 	pgrep ${frpc}
+fi
+if [ $# -gt 0 ] && [ $1 == "-start" ]; then
+	net=6;
+	while [ true ];
+	do
+		curl www.baidu.com > /dev/null
+		if [ $? == 0 ]; then break; fi
+		sleep 3s
+	done
+	sum=0;
+	list=$(ls ${path}config)
+	for file in ${list}
+	do
+		ini_file=${path}config/${file}
+		ini_node=${file/.ini/}
+		if [ ! -f ${path}pid/${ini_node}.pid  ]; then
+			run_frpc ${ini_node}
+			let sum+=1;
+		fi
+	done
+	echo "已启动 ${sum} 个隧道"
 fi
