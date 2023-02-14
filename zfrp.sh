@@ -228,7 +228,8 @@ Type=simple
 User=root
 KillMode=none
 Restart=no
-ExecStart=${path}zfrp -runall
+ExecStartPre=${path}zfrp.sh -stop
+ExecStart=${path}zfrp.sh -runall
 ExecStop=echo stop
 [Install]
 WantedBy=multi-user.target" > /etc/systemd/system/zfrp.service
