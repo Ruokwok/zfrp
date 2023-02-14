@@ -14,6 +14,7 @@ echo "[1]安装"
 echo "[2]卸载"
 printf "请输入操作序号:"
 read oper
+if [ ! ${oper} ]; then echo 请输入正确的序号; exit 1; fi
 clear
 if [ ${oper} == "1" ]; then
 	echo 请选择frpc版本
@@ -84,7 +85,7 @@ if [ ${oper} == "1" ]; then
 	clear
 	echo 开始下载...
 	rm -rf frp.tar.gz
-	wget -O frp.tar.gz https://kgithub.com/fatedier/frp/releases/download/v${version}/frp_${version}_linux_${arch}.tar.gz
+	wget -O frp.tar.gz https://github.com/fatedier/frp/releases/download/v${version}/frp_${version}_linux_${arch}.tar.gz
 	tar -xvpf frp.tar.gz frp_${version}_linux_${arch}/frpc
 	mkdir /etc/zfrp
 	mv frp_${version}_linux_${arch}/frpc /etc/zfrp/zfrp_frpc
@@ -94,12 +95,16 @@ if [ ${oper} == "1" ]; then
 	echo 安装完毕!
 	zfrp -help
 	rm -rf frp_${version}_linux_${arch}
-fi
-if [ ${oper} == "2" ]; then
+elif [ ${oper} == "2" ]; then
 	echo 关闭全部隧道
 	zfrp -stopall
 	echo 删除文件
 	rm -rf /etc/zfrp
 	rm -rf /usr/bin/zfrp
+	echo 注销服务
+	rm -rf /etc/systemd/system/zfrp.service
+	systemctl daemon-reload
 	echo zfrp已卸载!
+else
+	echo 请输入正确的序号
 fi
