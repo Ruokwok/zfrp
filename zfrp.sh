@@ -1,7 +1,7 @@
 #!/bin/bash
 
 path=/etc/zfrp/
-frpc=zfrp_frpc_0392
+frpc=zfrp_frpc
 
 init() {
 	if [ ! -d "${path}logs" ]; then mkdir "${path}logs"; fi
