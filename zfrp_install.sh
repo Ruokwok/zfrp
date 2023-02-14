@@ -87,8 +87,9 @@ if [ ${oper} == "1" ]; then
 	mkdir frp_temp
 	tar -xvpf frp.tar.gz frp frp_${version}_linux_${arch}/frpc
 	mv frp_${version}_linux_${arch}/frpc /etc/zfrp/zfrp_frpc
-	wget -O /etc/zfrp/zfrp.sh https://res-1254286788.cos.ap-shanghai.myqcloud.com/zfrp/zfrp
+	wget -O /etc/zfrp/zfrp.sh https://raw.kgithub.com/Ruokwok/zfrp/main/zfrp.sh
 	ln /usr/bin/zfrp /etc/zfrp/zfrp.sh
-	zfrp
+	echo 安装完毕!
+	zfrp -help
 fi
 
