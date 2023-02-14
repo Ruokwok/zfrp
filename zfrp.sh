@@ -180,7 +180,7 @@ fi
 if [ $# -gt 0 ] && [ $1 == "-v" ]; then
 	echo zfrp - 1.0.1
 	printf "frpc - " 
-	${path}${fprc} -v
+	${path}${frpc} -v
 	printf "arch - "
 	arch
 fi
