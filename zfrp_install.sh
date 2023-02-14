@@ -90,9 +90,16 @@ if [ ${oper} == "1" ]; then
 	mv frp_${version}_linux_${arch}/frpc /etc/zfrp/zfrp_frpc
 	wget -O /etc/zfrp/zfrp.sh https://raw.kgithub.com/Ruokwok/zfrp/main/zfrp.sh
 	chmod 755 /etc/zfrp/zfrp.sh
-	ln /usr/bin/zfrp /etc/zfrp/zfrp.sh
+	ln /etc/zfrp/zfrp.sh /usr/bin/zfrp
 	echo 安装完毕!
 	zfrp -help
 	rm -rf frp_${version}_linux_${arch}
 fi
-
+if [ ${oper} == "2" ]; then
+	echo 关闭全部隧道
+	zfrp -stopall
+	echo 删除文件
+	rm -rf /etc/zfrp
+	rm -rf /usr/bin/zfrp
+	echo zfrp已卸载!
+fi
