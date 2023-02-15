@@ -2,8 +2,9 @@
 
 path=/etc/zfrp/
 frpc=zfrp_frpc
+version=1.0.4
 
-init() {
+function init() {
 	if [ ! -d "${path}logs" ]; then mkdir "${path}logs"; fi
 	if [ ! -d "${path}pid" ]; then mkdir "${path}pid"; fi
 	if [ ! -d "${path}config" ]; then mkdir "${path}config"; fi
@@ -28,20 +29,27 @@ function read_ini(){
         return 2
     fi
 }
-run_frpc(){
+function run_frpc(){
 	nohup ${path}${frpc} -c ${path}config/$1.ini > "${path}logs/$1.log" 2>&1& echo $! > "${path}pid/$1.pid"
+}
+function status() {
+	pids=$(pgrep ${frpc});
+	[[ ${pids[@]/$1/} != ${pids[@]} ]] && echo $1 || echo "null"
 }
 init
 if [ $# -eq 0 ]; then
 	echo "zfrp -help 获取帮助"
+	exit 0
 fi
 if [ $# -gt 0 ] && [ $1 == "-help" ]; then
 	echo zfrp 用法:
 	echo -e "\t-help\t\t获取帮助"
 	echo -e "\t-v\t\t查看版本"
-	echo -e "\t-s\t\t创建新隧道"
+	echo -e "\t-s\t\t快速创建隧道(引导)"
+	echo -e "\t-S\t\t创建隧道"
 	echo -e "\t-run [name]\t启动隧道"
 	echo -e "\t-stop [name]\t停止隧道"
+	echo -e "\t-edit [name]\t编辑隧道配置"
 	echo -e "\t-remove [name]\t删除隧道"
 	echo -e "\t-log [name]\t查看隧道日志"
 	echo -e "\t-ls\t\t查看隧道列表"
@@ -53,8 +61,7 @@ if [ $# -gt 0 ] && [ $1 == "-help" ]; then
 fi
 if [ $# -gt 0 ] && [ $1 == "-s" ]; then
 	echo 开始创建新隧道
-	printf "请输入隧道名称:"
-	read frp_name
+	read -e -p 请输入隧道名称: frp_name
 	if [ ! ${frp_name} ]; then
 		echo 不能为空！
 		exit 1;
@@ -63,35 +70,29 @@ if [ $# -gt 0 ] && [ $1 == "-s" ]; then
 		echo 该隧道已经存在!
 		exit 1
 	fi
-	printf "服务端地址:"
-	read frp_server_ip
+	read -e -p 服务端地址: frp_server_ip
 	if [ ! ${frp_server_ip} ]; then
                 echo 不能为空！
                 exit 1;
         fi
-	printf "服务端端口(7000):"
-	read frp_server_port
+	read -e -p "服务端端口(7000):" frp_server_port
 	if [ ! ${frp_server_port} ]; then
 		frp_server_port=7000
 	fi
-	printf "客户端地址(127.0.0.1):"
-        read frp_client_ip
+	read -e -p "客户端地址(127.0.0.1):" frp_client_ip
         if [ ! ${frp_client_ip} ]; then
                 frp_client_ip="127.0.0.1"
         fi
-	printf "客户端端口(22):"
-        read frp_client_port
+	read -e -p "客户端端口(22):" frp_client_port
         if [ ! ${frp_client_port} ]; then
                 frp_client_port=22
         fi
-	printf "远程端口:"
-	read frp_remote
+	read -e -p 远程端口: frp_remote
 	if [ ! ${frp_remote} ]; then
 		echo 不能为空！
 		exit 1;
 	fi
-	printf "网络协议(tcp/udp):"
-        read frp_p
+	read -e -p "网络协议(tcp/udp):" frp_p
         if [ ! ${frp_p} ]; then
                 echo 不能为空!
                 exit 1;
@@ -110,19 +111,29 @@ type = ${frp_p}
 local_ip = ${frp_client_ip}
 local_port = ${frp_client_port}
 remote_port = ${frp_remote}" > "${path}config/${frp_name}.ini"
-echo 创建成功!
+	echo 创建成功!
+	exit 0
 fi
 
 if [ $# -gt 0 ] && [ $1 == "-run" ]; then
 	if [ $2 ] && [ -f "${path}config/$2.ini" ]; then
 		if [ -f "${path}pid/$2.pid" ]; then
-			echo 该隧道正在运行
+			pid=`cat ${path}pid/$2.pid`
+			stat=`status ${pid}`
+			if [ ${stat} != "null" ]; then
+				echo 该隧道正在运行
+				exit 1
+			else
+				run_frpc $2
+				exit 0
+			fi
 		else
 			run_frpc $2
-			echo "$2隧道已启动"
+			exit 0
 		fi
 	else
 		echo 请输入正确的隧道名称
+		exit 1
 	fi
 fi
 
@@ -132,39 +143,53 @@ if [ $# -gt 0 ] && [ $1 == "-stop" ]; then
                         pid=`cat ${path}pid/$2.pid`
 			kill -9 ${pid}
 			rm -rf ${path}pid/$2.pid
-			echo "$2隧道已关闭"
+			exit 0;
 		else
                         echo "该隧道已经停止"
+                        exit 1
                 fi
         else
                 echo 请输入正确的隧道名称
+                exit 1
         fi
 fi
 
 if [ $# -gt 0 ] && [ $1 == "-ls" ]; then
-	echo -e "名称\t服务器\t\t\t远程端口\t本地端口\t协议\tPID"
+	echo -e "名称\t\t服务器\t\t\t本地主机\t\t远程端口\t协议\tPID"
 	list=$(ls ${path}config)
+	pids=$(pgrep ${frpc})
  	for file in ${list}
 	do
 		ini_file=${path}config/${file}
 		ini_node=${file/.ini/}
 		printf "${ini_node}\t"
-		read_ini ${ini_file} common server_addr
-		printf ":"
-		read_ini ${ini_file} common server_port
+		if [ ${#ini_node} -lt 9 ]; then
+			printf "\t"
+		fi
+		server=`read_ini ${ini_file} common server_addr`:`read_ini ${ini_file} common server_port`
+		printf "${server}\t"
+		if [ ${#server} -lt 16 ]; then
+			printf "\t"
+		fi
+		local=`read_ini ${ini_file} ${ini_node} local_ip`:`read_ini ${ini_file} ${ini_node} local_port`
+		printf ${local}
+		if [ ${#local} -lt 16 ]; then
+			printf "\t"
+		fi
 		printf "\t"
 		read_ini ${ini_file} ${ini_node} remote_port
-		printf "\t\t"
-		read_ini ${ini_file} ${ini_node} local_port
 		printf "\t\t"
 		read_ini ${ini_file} ${ini_node} type
 		printf "\t"
 		if [ -f "${path}pid/${ini_node}.pid" ]; then
-			echo `cat ${path}pid/${ini_node}.pid`
+			pid=`cat ${path}pid/${ini_node}.pid`
+			stat=`status ${pid}`
+			if [ ${stat} == "null" ]; then echo 已停止; else echo ${stat}; fi
 		else
 			echo 已停止
 		fi
 	done
+	exit 0
 fi
 if [ $# -gt 0 ] && [ $1 == "-remove" ]; then
 	if [ ! $2 ]; then
@@ -175,21 +200,25 @@ if [ $# -gt 0 ] && [ $1 == "-remove" ]; then
 		rm -rf ${path}config/$2.ini
 		rm -rf ${path}logs/$2.log
 		rm -rf ${path}pid/$2.pid
+		exit 0
 	fi
 fi
 if [ $# -gt 0 ] && [ $1 == "-v" ]; then
-	echo zfrp - 1.0.1
+	echo zfrp - ${version}
 	printf "frpc - " 
 	${path}${frpc} -v
 	printf "arch - "
 	arch
+	echo https://github.com/Ruokwok/zfrp
+	exit 0
 fi
 if [ $# -gt 0 ] && [ $1 == "-log" ]; then
 	if [ -f ${path}logs/$2.log ]; then
 		cat ${path}logs/$2.log
+		exit 0
 	else
 		echo 该隧道不存在!
-		exit 1;
+		exit 1
 	fi
 fi
 if [ $# -gt 0 ] && [ $1 == "-runall" ]; then
@@ -205,6 +234,7 @@ if [ $# -gt 0 ] && [ $1 == "-runall" ]; then
 		fi
 	done
 	echo "已启动 ${sum} 个隧道"
+	exit 0
 fi
 if [ $# -gt 0 ] && [ $1 == "-stopall" ]; then
 	list=$(pgrep ${frpc})
@@ -216,6 +246,7 @@ if [ $# -gt 0 ] && [ $1 == "-stopall" ]; then
 	done
 	rm -rf ${path}pid
 	echo "已停止 ${sum} 个隧道"
+	exit 0
 fi
 if [ $# -gt 0 ] && [ $1 == "-enable" ]; then
 	if [ $2 ]; then
@@ -236,18 +267,22 @@ WantedBy=multi-user.target" > /etc/systemd/system/zfrp.service
 			systemctl daemon-reload
 			systemctl enable zfrp.service
 			echo zfrp自启动已开启
+			exit 0
 		elif [ $2 == "off" ]; then
 			systemctl disable zfrp.service
 			echo zfrp自启动已关闭
+			exit 0
 		fi
 	else
 		echo 用法:
 		echo -e "zfrp -enable on\t\t开启开机自启动"
 		echo -e "zfrp -enable off\t关闭开机自启动"
+		exit 0
 	fi
 fi
 if [ $# -gt 0 ] && [ $1 == "-pid" ]; then
 	pgrep ${frpc}
+	exit 0
 fi
 if [ $# -gt 0 ] && [ $1 == "-start" ]; then
 	net=6;
@@ -269,4 +304,36 @@ if [ $# -gt 0 ] && [ $1 == "-start" ]; then
 		fi
 	done
 	echo "已启动 ${sum} 个隧道"
+	exit 0
 fi
+if [ $# -gt 0 ] && [ $1 == "-edit" ]; then
+	if [ ! $2 ]; then
+		echo  用法: zfrp -edit [name]
+		exit 0
+	elif [ -f ${path}config/$2.ini ]; then
+		vi ${path}config/$2.ini
+		exit 0
+	else
+		echo 该隧道不存在!
+		exit 1
+	fi
+fi
+if [ $# -gt 0 ] && [ $1 == "-S" ]; then
+	if [ ! $2 ]; then
+		echo 用法: zfrp -S [name]
+		exit 0
+	else
+		echo -e "[common]
+server_addr = exmple.com
+server_port = 7000
+
+[$2]
+type = tcp
+local_ip = 127.0.0.1
+local_port = 22
+remote_port = 2233" > ${path}config/$2.ini
+	vi ${path}config/$2.ini
+	exit 0
+	fi
+fi
+${path}zfrp.sh -help
