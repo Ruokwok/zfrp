@@ -12,8 +12,7 @@ echo ZFRP一键安装脚本
 echo
 echo "[1]安装"
 echo "[2]卸载"
-printf "请输入操作序号:"
-read oper
+read -e -p 请输入操作序号: oper
 if [ ! ${oper} ]; then echo 请输入正确的序号; exit 1; fi
 clear
 if [ ${oper} == "1" ]; then
@@ -29,8 +28,7 @@ if [ ${oper} == "1" ]; then
 	echo [8]v0.46.0
 	echo [9]v0.46.1
 	echo [10]v0.47.0
-	printf "输入序号:"
-	read ver
+	read -e -p 输入序号: ver
 	version=null
 	case ${ver} in
 		1)version="0.39.1" ;;
@@ -64,8 +62,7 @@ if [ ${oper} == "1" ]; then
 	echo [8]mips64le
 	echo [9]mipsle
 	echo [10]riscv64
-	printf 输入序号:
-	read Arch
+	read -e -p 输入序号: Arch
 	case ${Arch} in
 		1) arch=`format_arch ${auto}` ;;
 		2) arch=386 ;;
@@ -96,15 +93,32 @@ if [ ${oper} == "1" ]; then
 	zfrp -help
 	rm -rf frp_${version}_linux_${arch}
 elif [ ${oper} == "2" ]; then
-	echo 关闭全部隧道
-	zfrp -stopall
-	echo 删除文件
-	rm -rf /etc/zfrp
-	rm -rf /usr/bin/zfrp
-	echo 注销服务
-	rm -rf /etc/systemd/system/zfrp.service
-	systemctl daemon-reload
-	echo zfrp已卸载!
+	read -e -p "是否保留隧道配置文件?(yes/no):" config
+	if [ ! ${config} ]; then echo 输入有误!; fi
+	if [ ${config} == "no" ]; then
+		echo 关闭全部隧道
+		zfrp -stopall
+		echo 删除文件
+		rm -rf /etc/zfrp
+		rm -rf /usr/bin/zfrp
+		echo 注销服务
+		rm -rf /etc/systemd/system/zfrp.service
+		systemctl daemon-reload
+		echo zfrp已卸载!
+	elif [ ${config} == "yes" ]; then
+		echo 关闭全部隧道
+		zfrp -stopall
+		echo 删除文件
+		rm -rf /etc/zfrp/pid
+		rm -rf /etc/zfrp/logs
+		rm -rf /usr/bin/zfrp
+		echo 注销服务
+		rm -rf /etc/systemd/system/zfrp.service
+		systemctl daemon-reload
+		echo zfrp已卸载!
+	else
+		echo 输入有误!
+	fi
 else
 	echo 请输入正确的序号
 fi
